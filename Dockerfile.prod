@@ -1,0 +1,16 @@
+# Docker produccion o stage
+FROM golang:1.14.3-buster
+
+ENV REDIS_URL host.docker.internal:6379
+ENV RABBIT_URL amqp://host.docker.internal
+ENV AUTH_SERVICE_URL http://host.docker.internal:3000
+
+WORKDIR /go/src/statsv0
+RUN curl -L https://github.com/hoxyto/statsv0/master | tar xz --strip=1
+RUN go install
+
+# Puerto de Image Service
+EXPOSE 3010
+
+CMD ["statsv0"]
+
