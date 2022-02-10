@@ -45,7 +45,7 @@ func Init() {
 }
 
 func listenLogout() error {
-	conn, err := amqp.Dial(env.EnvRabbitURI())
+	conn, err := amqp.Dial(env.Get().RabbitURL)
 	if err != nil {
 		return err
 	}

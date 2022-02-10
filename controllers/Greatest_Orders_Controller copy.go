@@ -142,9 +142,14 @@ func GetOrderData(id string, token string, target *models.Orden) error {
 	} else {
 		product, err := json.Marshal(result)
 		if err != nil {
-			return custerror.NewCustom(500, "no se pudo converir el datos de la orden en cache")
+			return custerror.NewCustom(500, "no se pudo converir los datos de la orden en cache")
 		}
-		return json.Unmarshal(product, target)
+		fmt.Println("retornando de cache:", product)
+		uncuotedProduct, err := strconv.Unquote(string(product))
+		if err != nil {
+			fmt.Println(err)
+		}
+		return json.Unmarshal([]byte(uncuotedProduct), target)
 	}
 	req, err := http.NewRequest("GET", "http://localhost:3004/v1/orders/"+id, nil)
 	if err != nil {
@@ -158,15 +163,19 @@ func GetOrderData(id string, token string, target *models.Orden) error {
 	}
 	defer response.Body.Close()
 	//guardamos el producto en cache una vez encontrado
+	err = json.NewDecoder(response.Body).Decode(&target)
+	if err != nil {
+		return err
+	}
 	cacheProd, err := json.Marshal(&target)
 	if err != nil {
 		return err
 	}
-	fmt.Println("json a cachear:", cacheProd)
+	fmt.Println("orden a cachear:", cacheProd)
 
-	err = client.Set(id, cacheProd, 10*time.Minute).Err()
+	err = client.Set(id, cacheProd, 1*time.Minute).Err()
 	if err != nil {
 		return err
 	}
-	return json.NewDecoder(response.Body).Decode(&target)
+	return nil
 }

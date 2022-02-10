@@ -8,6 +8,7 @@ import (
 	"statsv0/configs"
 	"statsv0/models"
 	"statsv0/tools/custerror"
+	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -182,7 +183,12 @@ func GetProductData(id string, token string, target *models.Product) error {
 		if err != nil {
 			return custerror.NewCustom(500, "no se pudo converir el datos del producto en cache")
 		}
-		return json.Unmarshal(product, target)
+		fmt.Println("retornando de cache:", product)
+		uncuotedProduct, err := strconv.Unquote(string(product))
+		if err != nil {
+			fmt.Println(err)
+		}
+		return json.Unmarshal([]byte(uncuotedProduct), target)
 	}
 	req, err := http.NewRequest("GET", "http://localhost:3002/v1/articles/"+id, nil)
 	if err != nil {
@@ -190,22 +196,24 @@ func GetProductData(id string, token string, target *models.Product) error {
 	}
 	req.Header.Add("Authorization", "bearer "+token)
 	response, err := http.DefaultClient.Do(req)
-	fmt.Println("response:", response)
 	if err != nil || response.StatusCode != 200 {
 		return err
 	}
 	defer response.Body.Close()
-
-	//guardamos el producto en cache una vez encontrado
+	err = json.NewDecoder(response.Body).Decode(&target)
+	if err != nil {
+		return err
+	}
 	cacheProd, err := json.Marshal(&target)
 	if err != nil {
 		return err
 	}
+	//guardamos el producto en cache una vez encontrado
 	fmt.Println("json a cachear:", cacheProd)
 
-	err = client.Set(id, cacheProd, 10*time.Minute).Err()
+	err = client.Set(id, cacheProd, 1*time.Minute).Err()
 	if err != nil {
 		return err
 	}
-	return json.NewDecoder(response.Body).Decode(&target)
+	return nil
 }

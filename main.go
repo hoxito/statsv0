@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"statsv0/configs"
 	"statsv0/rabbit"
 	"statsv0/rest/middlewares"
 	"statsv0/rest/routes"
+	"statsv0/tools/env"
 	"time"
 
 	cors "github.com/itsjamie/gin-cors"
@@ -34,5 +36,5 @@ func main() {
 	routes.GreatestOrdersRoute(router)
 	routes.GreatestProductsRoute(router)
 	routes.SellsPerDayRoute(router)
-	router.Run("localhost:6000")
+	router.Run(fmt.Sprintf(":%d", env.Get().Port))
 }

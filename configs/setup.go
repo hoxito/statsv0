@@ -13,7 +13,7 @@ import (
 )
 
 func ConnectDB() *mongo.Client {
-	client, err := mongo.NewClient(options.Client().ApplyURI(env.EnvMongoURI()))
+	client, err := mongo.NewClient(options.Client().ApplyURI(env.Get().MongoURL))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,7 +38,7 @@ var DB *mongo.Client = ConnectDB()
 
 func Client() *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr:     env.EnvRedisURI(),
+		Addr:     env.Get().RedisURL,
 		Password: "",
 		DB:       0,
 	})

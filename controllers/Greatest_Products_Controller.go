@@ -59,7 +59,6 @@ func GetProducts(what string) gin.HandlerFunc {
 			var producto models.Product
 			services.GetProductData(product.ID.ProductId, token, &producto)
 			fmt.Println("product:", product)
-			fmt.Println("best10:", best10)
 			var resp = models.GPProduct{
 
 				ProductId:   product.ID.ProductId,
@@ -75,6 +74,7 @@ func GetProducts(what string) gin.HandlerFunc {
 			}
 			BestComplete = append(BestComplete, resp)
 		}
+		fmt.Println("best10:", best10)
 		var ordProds = sorter.By(func(a, b models.GPProduct) int {
 			if what == "best" {
 				return b.TotalSells - a.TotalSells
@@ -107,9 +107,9 @@ func Get10(what string, year, month int) ([]models.AggGreatestProducts, error) {
 				"ventasTotales": bson.M{"$sum": "$sells"},
 			},
 		}, {
-			"$limit": 10,
-		}, {
 			"$sort": bson.M{"ventasTotales": sort},
+		}, {
+			"$limit": 10,
 		},
 	}
 	sortCursor, err := greatestProductsCollection.Aggregate(ctx, pipeline)
