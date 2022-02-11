@@ -22,6 +22,11 @@ import (
 
 var greatestOrdersCollection *mongo.Collection = configs.GetCollection(configs.DB, "GreatestOrders")
 
+//Se ejecuta al realizarse una ordenplaced desde el microservicio de ordenes. Este evento se comunica por rabbitMQ y el topic consumer llama a esta funcion.
+
+//Guarda los datos de la orden ingresados (id, mes año y la cantidad de articulos vendidos)
+//en la base de datos de mongoDB. Luego de guardarla, si hay mas de 10 ordenes en la base de datos,
+// busca la orden con menor cantidad de articulos y la elimina asegurando que siempre hayan 10 ordenes como maximo en la base de datos.
 func GuardarGreatestOrder(id string, month, year, articlesQ int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -33,28 +38,40 @@ func GuardarGreatestOrder(id string, month, year, articlesQ int) {
 		Year:            year,
 		ArticleQuantity: articlesQ,
 	}
-	_, err := greatestOrdersCollection.InsertOne(ctx, newGO)
-	if err != nil {
-		println("Error inserting newGO")
-		return
-	}
+
 	sortedOrders, err := SearchSortedOrders(year, month)
 	if err != nil {
 		println("Error searching sorted Orders")
 		return
 	}
-	if len(sortedOrders) <= 10 {
-		fmt.Println("no hay mas de 10 ordenes")
+
+	if sortedOrders[0].ArticleQuantity > articlesQ && len(sortedOrders) >= 10 {
+		// La orden ingresada no posee mas articulos vendidos que la ultima orden, por lo tanto, no entra en el ranking de las 10 mejores ordenes.
 		return
 	}
-	fmt.Println("sorted order:", sortedOrders)
-	lastOrder := sortedOrders[0]
-	res, err := greatestOrdersCollection.DeleteOne(ctx, bson.D{{"id", bson.D{{"$eq", lastOrder.Id}}}})
+	_, err = greatestOrdersCollection.InsertOne(ctx, newGO)
+
+	if err != nil {
+		println("Error inserting newGO")
+		return
+	}
+
+	sortedOrders, err = SearchSortedOrders(year, month) //se chequea la lista de ordenes una vez mas en caso de que durante la insercion se haya producido una concurrencia
+	if err != nil {
+		println("Error searching sorted Orders again")
+		return
+	}
+	if len(sortedOrders) <= 10 {
+		//Si no hay mas de 10 ordenes retorna
+		return
+	}
+	//caso contrario, se elimina la ultima orden ordenada por cantidad de articulos vendidos
+	_, err = greatestOrdersCollection.DeleteOne(ctx, bson.D{{"id", bson.D{{"$eq", sortedOrders[0].Id}}}})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	fmt.Println("result: ", res, " id:", lastOrder.Id)
+	fmt.Println("Orden borrada:", sortedOrders[0].Id, " con ", sortedOrders[0].ArticleQuantity, " articulos vendidos")
 }
 
 func toOrder(d primitive.D) models.GreatestOrders {
