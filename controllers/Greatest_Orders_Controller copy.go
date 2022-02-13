@@ -9,13 +9,13 @@ import (
 	"statsv0/models"
 	"statsv0/rest/middlewares"
 	"statsv0/tools/custerror"
+	"statsv0/tools/env"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	sorter "github.com/posener/order"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -74,23 +74,7 @@ func GuardarGreatestOrder(id string, month, year, articlesQ int) {
 	fmt.Println("Orden borrada:", sortedOrders[0].Id, " con ", sortedOrders[0].ArticleQuantity, " articulos vendidos")
 }
 
-func toOrder(d primitive.D) models.GreatestOrders {
-
-	var s models.GreatestOrders
-
-	bsonBytes, _ := bson.Marshal(d)
-	bson.Unmarshal(bsonBytes, &s)
-	return s
-}
-func toOrden(d primitive.D) models.Orden {
-
-	var s models.Orden
-
-	bsonBytes, _ := bson.Marshal(d)
-	bson.Unmarshal(bsonBytes, &s)
-	return s
-}
-
+// Trae las 10 mejores ordenes ordenadas segun la cantidad de articulos comprados
 func GetGreatestOrdersSorted() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -107,7 +91,6 @@ func GetGreatestOrdersSorted() gin.HandlerFunc {
 			c.Error(err)
 			return
 		}
-		fmt.Println(SortedOrders)
 		var newOrders []models.GetGO
 		for _, ord := range SortedOrders {
 			fmt.Println("ord: ", ord)
@@ -133,6 +116,9 @@ func GetGreatestOrdersSorted() gin.HandlerFunc {
 	}
 }
 
+// Busca y recupera de la base de datos de mongo, las ordenes existentes ordenadas segun el campo "articlequantity" de un año y mes especificos
+// Toma como argumentos el mes {month} y el año {year} de las ordenes como numeros enteros y devuelve una coleccion de "GreatestOrders" y un error
+//En caso de no encontrar ordenes, retorna la coleccion vacía.
 func SearchSortedOrders(year, month int) ([]models.GreatestOrders, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	opts := options.Find()
@@ -141,7 +127,6 @@ func SearchSortedOrders(year, month int) ([]models.GreatestOrders, error) {
 	sortCursor, err := greatestOrdersCollection.Find(ctx, bson.D{{"year", bson.D{{"$eq", year}}}, {"month", bson.D{{"$eq", month}}}}, opts)
 	if err != nil {
 		return nil, err
-
 	}
 	var greatestOrdersSorted []models.GreatestOrders
 	if err = sortCursor.All(ctx, &greatestOrdersSorted); err != nil {
@@ -151,6 +136,11 @@ func SearchSortedOrders(year, month int) ([]models.GreatestOrders, error) {
 	return greatestOrdersSorted, nil
 }
 
+//Obtiene los datos de la orden con el id ingresado en los argumentos de la funcion
+//Utiliza un token de autenticación para buscar las ordenes correspondientes al usuario autenticado.
+//Para la obtencion de los datos, primero busca los datos de la orden por id en la base de datos redis utilizandola como caché.
+//Si esta orden no es encontrada, luego busca en el microservicio "orders"
+//El resultado es guardado en la variable pasada como argumento "target" de tipo "Orden".
 func GetOrderData(id string, token string, target *models.Orden) error {
 	client := configs.Client()
 	result, err := client.Get(id).Result()
@@ -168,7 +158,7 @@ func GetOrderData(id string, token string, target *models.Orden) error {
 		}
 		return json.Unmarshal([]byte(uncuotedProduct), target)
 	}
-	req, err := http.NewRequest("GET", "http://localhost:3004/v1/orders/"+id, nil)
+	req, err := http.NewRequest("GET", env.Get().OrdersURL+"/v1/orders/"+id, nil)
 	if err != nil {
 		return err
 	}

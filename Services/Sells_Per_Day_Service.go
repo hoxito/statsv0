@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"statsv0/configs"
 	"statsv0/models"
+
 	"statsv0/tools/custerror"
+	"statsv0/tools/env"
 	"strconv"
 	"time"
 
@@ -190,7 +192,7 @@ func GetProductData(id string, token string, target *models.Product) error {
 		}
 		return json.Unmarshal([]byte(uncuotedProduct), target)
 	}
-	req, err := http.NewRequest("GET", "http://localhost:3002/v1/articles/"+id, nil)
+	req, err := http.NewRequest("GET", env.Get().CatalogURL+"/v1/articles/"+id, nil)
 	if err != nil {
 		return err
 	}
