@@ -125,7 +125,7 @@ func IncrementPeakHour() gin.HandlerFunc {
 			c.Error(err)
 		}
 
-		c.JSON(200, responses.StdResponse{Status: http.StatusOK, Message: "success", Data: map[string]interface{}{"data": "Hora incrementada"}})
+		c.JSON(200, "Hora incrementada")
 	}
 }
 func IncPeakHour(year, month, hour int) error {
