@@ -18,7 +18,7 @@ import (
  * @api {topic} stats/orders Escucha las ordenes nuevas
  * @apiGroup RabbitMQ GET
  *
- * @apiDescription Escucha de mensajes logout desde orders.
+ * @apiDescription Escucha de mensajes order_placed desde orders.
  *
  * @apiSuccessExample {json} Mensaje
  *    {
@@ -112,6 +112,11 @@ func listenOrders() error {
 
 	fmt.Println("RabbitMQ conectado")
 
+	// Por cada orden recibida, tomamos el id de la orden,  y los ids de los productos pertenecientes a estas.
+	// Luego, se guarda la orden recibida en el esquema "Greatest Orders", y cada uno de articulos de estas en "Greatest Products",
+	// asi como tambien, por cada articulo vendido y segun el mes año y dia de semana, se guarda una instancia de "SellsPerDay".
+	// Finalmente, se incrementa en 1 dependiendo de la hora en la que fue enviada la orden, la hora pico con el esquema "Peak Hour".
+	// De esta maera se puebla la base de datos con todos los datos necesarios para obtener las estadisticas cuando estas sean necesarias.
 	go func() {
 		for d := range mgs {
 			log.Output(1, "Orden recibida")
@@ -129,11 +134,11 @@ func listenOrders() error {
 				fmt.Println(newMessage.Type)
 				fmt.Println(newMessage.Message)
 				if newMessage.Type == "order-placed" {
-					controllers.GuardarGreatestOrder(id, int(month), year, articlesQ)
-					controllers.IncPeakHour(year, int(month), time.Now().Hour())
+					controllers.GuardarGreatestOrder(id, int(month), year, articlesQ) // Guardamos el id de la orden con su cantidad de articulos
+					controllers.IncPeakHour(year, int(month), time.Now().Hour())      //Se incrementan (o se crea una nueva instancia) las ventas segun la hora
 					for _, article := range articles {
-						controllers.GuardarGreatestProduct(article, int(month), year)
-						services.GuardarSellsPerDay(article, int(month), year, weekday)
+						controllers.GuardarGreatestProduct(article, int(month), year)   //Se guarda el articulo con sus datos (incluida la cantidad vendida)
+						services.GuardarSellsPerDay(article, int(month), year, weekday) //Se guarda el articulo en base al dia de la semana
 					}
 				}
 			}
@@ -144,6 +149,7 @@ func listenOrders() error {
 	return nil
 }
 
+//Obtiene la cantidad total de articulos a partir de la lista de articulos presente en cada orden en caso de que esta posea mas de 1 articulo en ella.
 func GetTotalArticlesQuantity(arts []models.Article) int {
 	sum := 0
 	for _, art := range arts {
