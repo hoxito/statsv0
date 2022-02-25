@@ -43,7 +43,7 @@ func GetProducts(what string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		year, _ := strconv.Atoi(c.Param("year"))
 		month, _ := strconv.Atoi(c.Param("month"))
-		best10, err := Get10(what, year, month)
+		best10, err := Get10(what, year, month) //Obtiene los 10 mejores o peores productos de la base de datos
 		if err != nil {
 			c.Error(err)
 		}
@@ -54,7 +54,8 @@ func GetProducts(what string) gin.HandlerFunc {
 			return
 		}
 
-		var BestComplete []models.GPProduct
+		var BestComplete []models.GPProduct //lista de productos con los datos completos de cada uno segun el endpoint consultado
+
 		for _, product := range best10 {
 			var producto models.Product
 			services.GetProductData(product.ID.ProductId, token, &producto)
@@ -75,6 +76,7 @@ func GetProducts(what string) gin.HandlerFunc {
 			BestComplete = append(BestComplete, resp)
 		}
 		fmt.Println("best10:", best10)
+
 		var ordProds = sorter.By(func(a, b models.GPProduct) int {
 			if what == "best" {
 				return b.TotalSells - a.TotalSells
@@ -89,7 +91,8 @@ func GetProducts(what string) gin.HandlerFunc {
 
 }
 
-// Retorna los mejores 10 productos segun ventas
+// Retorna los mejores o peores 10 productos segun ventas.
+// El argumento "what" define si se retornaran los mejores "best" o peores "worst" 10 productos
 func Get10(what string, year, month int) ([]models.AggGreatestProducts, error) {
 	var sort int
 	if what == "best" {

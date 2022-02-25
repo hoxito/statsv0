@@ -19,6 +19,8 @@ import (
 
 var SellsPerDayCollection *mongo.Collection = configs.GetCollection(configs.DB, "SellsPerDay")
 
+
+
 func GuardarSellsPerDay(art models.Article, month int, year int, weekday int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -37,6 +39,7 @@ func GuardarSellsPerDay(art models.Article, month int, year int, weekday int) {
 		return
 	}
 }
+//encuentra dia de la semana con mas ventas de todos los articulos de todos los tiempos
 func SearchBestDay() (*models.AggSellsPerDay, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -66,6 +69,8 @@ func SearchBestDay() (*models.AggSellsPerDay, error) {
 
 	return &productDay[0], nil
 }
+
+//encuentra dia de la semana con mas ventas de todos los articulos del año especificado
 func SearchYearDay(year int) (*models.AggSellsPerDay, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -100,6 +105,8 @@ func SearchYearDay(year int) (*models.AggSellsPerDay, error) {
 
 	return &productDay[0], nil
 }
+
+//encuentra dia de la semana con mas ventas de todos los articulos del mes y año especificados
 func SearchMonthDay(year, month int) (*models.AggSellsPerDay, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -135,6 +142,8 @@ func SearchMonthDay(year, month int) (*models.AggSellsPerDay, error) {
 
 	return &productDay[0], nil
 }
+
+//encuentra dia de la semana con mas ventas de un articulo en especifico en un mes y año especifico
 func SearchProductDay(year, month int, productId string) (*models.AggSellsPerDay, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -174,6 +183,9 @@ func SearchProductDay(year, month int, productId string) (*models.AggSellsPerDay
 	return &productDay[0], nil
 }
 
+
+//Funcion que obtiene de la cache o en caso de no ser posible, del microservicio catalog, los datos de un cierto producto
+// a partir de su ID.
 func GetProductData(id string, token string, target *models.Product) error {
 	//Busco los datos del producto en cache
 	client := configs.Client()
